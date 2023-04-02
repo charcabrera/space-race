@@ -6,28 +6,50 @@ const Home = () => {
   const [role, setRole] = useState('')
   const [bets, setBets] = useState('')
   const [localBet, setLocalBet] = useState('')
+  const [players, setPlayers] = useState('')
+  const [money, setMoney] = useState('')
+  const [timer, setTimer] = useState('')
 
-  useEffect(() => socketInitializer(), [])
+  const restartGame = () => {
+    setRole('')
+    setBets('')
+    setLocalBet('')
+    setTimer('')
+    console.log('restarting the game')
+  }
 
-  const socketInitializer = () => {
+  useEffect(() => {
     async function initsocket() {
-    await fetch('/api/socket');
-    socket = io()
+      await fetch('/api/socket');
+      socket = io()
 
-    socket.on('connect', () => {
-      console.log('connected')
-    })
+      socket.on('restart-game', () => {
+        restartGame()
+      })
 
-    socket.on('send-role', msg => {
-      setRole(msg)
-    })
+      socket.on('connect', () => {
+        console.log('connected with uid ' + socket.id)
+      })
+
+      socket.on('send-role', msg => {
+        setRole(msg)
+      })
 
       socket.on('update-bets', betList => {
-        setBets(betList.map((bet) => <li>{bet}</li>));
+        setBets(Object.entries(betList).map(([key, value]) => <li>Gambler {key} bet {value}</li>))
       })
+
+      socket.on('update-timer', ticks => {
+        setTimer(ticks)
+      })
+
+      socket.on('update-playercount', count => {
+        setPlayers(count);
+      })
+
     }
-    initsocket();
-  }
+  initsocket();
+  }, [])
 
   const onClickHandler = (gamer, e) => {
     socket.emit('choose-role', gamer);
@@ -43,13 +65,16 @@ const Home = () => {
   return (
     <>
       <form method='POST' action='/' onSubmit={handleSubmit}>
-      <button onClick={(e) => onClickHandler('jockey', e)}>jockey</button>
       <button onClick={(e) => onClickHandler('horse', e)}>horse</button>
+      <button onClick={(e) => onClickHandler('gambler', e)}>gambler</button>
       <input type='string' name='bet' value={localBet} onChange={(e) => setLocalBet(e.target.value)}/>
       <input type='submit' value='say so'/>
+      <p>Player count: {players}</p>
+      <p>You are a: {role}</p>
       <ul>
       {bets}
       </ul>
+      <p>timer: {timer}</p>
     </form>
     </>
   );
